@@ -1,0 +1,16 @@
+[project]
+name = "ngrok-revshell"
+version = "1.0.0"
+description = "Automate reverse shell setup using ngrok tunnels"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "python-dotenv",
+    "ngrok",
+    "pwntools",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.1",
+]

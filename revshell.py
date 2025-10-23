@@ -259,7 +259,8 @@ def upgrade_linux_shell(conn: listen):
 
     # Set up shell improvements
     execute(conn, "alias ls='ls -lha --color=auto'")
-    execute(conn, "export TERM=xterm")
+    execute(conn, "export SHELL=bash")
+    execute(conn, "export TERM=xterm-256color")
 
     # Get local stty rows and cols and set remote
     try:

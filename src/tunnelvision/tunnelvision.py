@@ -167,7 +167,8 @@ def print_revshell_examples(
 ):
     """Print reverse shell examples"""
     colored_print(
-        "=============== REVSHELL EXAMPLES ===============\n", Colors.BOLD + Colors.PURPLE
+        "=============== REVSHELL EXAMPLES ===============\n",
+        Colors.BOLD + Colors.PURPLE,
     )
 
     if not is_windows:
@@ -223,7 +224,8 @@ def print_revshell_examples(
 
     colored_print("See more examples at https://www.revshells.com/\n", Colors.CYAN)
     colored_print(
-        "=================================================\n", Colors.BOLD + Colors.PURPLE
+        "=================================================\n",
+        Colors.BOLD + Colors.PURPLE,
     )
 
 
@@ -392,8 +394,10 @@ def main():
         tunnel_obj, ip, public_port, hostname = setup_ngrok_tunnel(args.port)
         atexit.register(lambda: cleanup_ngrok(tunnel_obj))
 
-    colored_print(f"[+] Listening at {ip}:{public_port} ({hostname})...\n", Colors.GREEN)
-    
+    colored_print(
+        f"[+] Listening at {ip}:{public_port} ({hostname})...\n", Colors.GREEN
+    )
+
     if not args.quiet:
         print_revshell_examples(ip, public_port, shell, is_linux, is_windows)
 

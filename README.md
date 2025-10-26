@@ -12,21 +12,45 @@ Automate reverse shell setup using tunnel services (ngrok or bore).
 
 ## Installation
 
+### Option 1: Install with uv (recommended)
+
+```bash
+# Install directly from GitHub
+uv tool install git+https://github.com/Nissen96/tunnelvision
+
+# Or clone and install locally
+git clone https://github.com/Nissen96/tunnelvision.git
+cd tunnelvision
+uv tool install .
+```
+
+### Option 2: Install with pip
+
+```bash
+# Install directly from GitHub
+pip install git+https://github.com/Nissen96/tunnelvision
+
+# Or clone and install locally
+git clone https://github.com/Nissen96/tunnelvision.git
+cd tunnelvision
+pip install .
+```
+
+### Option 3: Run without installing
+
 ```bash
 # Clone the repository
 git clone https://github.com/Nissen96/tunnelvision.git
 cd tunnelvision
 
-# Install dependencies with uv (recommended)
-uv sync
-
-# Or optionally with pip (a venv is recommended)
-pip install .
+# Run with uv
+uv run tunnelvision 4444
 ```
 
 ## Setup
 
 ### For bore (recommended - no setup required!)
+
 Bore works out of the box with no authentication or setup required. Just install bore:
 
 ```bash
@@ -44,6 +68,7 @@ cargo install bore-cli
 ```
 
 #### Self-hosting bore server
+
 You can optionally run your own bore server for better control:
 
 ```bash
@@ -51,10 +76,11 @@ You can optionally run your own bore server for better control:
 bore server
 
 # Use your server with this tool
-uv run revshell.py 4444 --to your-server.com
+tunnelvision 4444 --to your-server.com
 ```
 
 ### For ngrok
+
 If you want to use ngrok instead of bore:
 
 1. Install ngrok Python package:
@@ -75,29 +101,29 @@ If you want to use ngrok instead of bore:
 
 ## Usage
 
-*Note: Replace `uv run` with `python` if you installed with `pip`*.
+*Note: Replace `tunnelvision` with `uv run tunnelvision` if not installed as a tool.
 
 ```bash
 # Basic usage (defaults to bore tunnel and bash shell)
-uv run revshell.py 4444
+tunnelvision 4444
 
 # Use ngrok instead
-uv run revshell.py 4444 --tunnel ngrok
+tunnelvision 4444 --tunnel ngrok
 
 # Specify shell type
-uv run revshell.py 4444 --shell powershell
-uv run revshell.py 4444 --tunnel bore --shell sh
-uv run revshell.py 4444 --tunnel ngrok --shell bash
+tunnelvision 4444 --shell powershell
+tunnelvision 4444 --tunnel bore --shell sh
+tunnelvision 4444 --tunnel ngrok --shell bash
 
 # Use custom bore server
-uv run revshell.py 4444 --to my-bore-server.com
-uv run revshell.py 4444 --tunnel bore --to localhost:7835
+tunnelvision 4444 --to my-bore-server.com
+tunnelvision 4444 --tunnel bore --to localhost:7835
 
 # Short options
-uv run revshell.py 4444 -t ngrok -s powershell
+tunnelvision 4444 -t ngrok -s powershell
 
 # Skip printing reverse shell examples
-uv run revshell.py 4444 --quiet
+tunnelvision 4444 --quiet
 ```
 
 ## Options

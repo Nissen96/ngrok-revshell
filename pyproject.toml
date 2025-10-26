@@ -3,14 +3,29 @@ name = "tunnelvision"
 version = "1.0.0"
 description = "Automate reverse shell setup using tunnel services (ngrok or bore)"
 readme = "README.md"
+authors = [
+    { name = "Nissen" }
+]
 requires-python = ">=3.9"
 dependencies = [
     "python-dotenv",
     "ngrok",
     "pwntools",
 ]
+license = { text = "MIT" }
+
+[project.urls]
+Homepage = "https://github.com/Nissen96/tunnelvision"
+Repository = "https://github.com/Nissen96/tunnelvision.git"
 
 [dependency-groups]
 dev = [
     "ruff>=0.14.1",
 ]
+
+[project.scripts]
+tunnelvision = "tunnelvision:main"
+
+[build-system]
+requires = ["uv_build>=0.9.4,<0.10.0"]
+build-backend = "uv_build"

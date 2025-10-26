@@ -98,7 +98,6 @@ uv run revshell.py 4444 -t ngrok -s powershell
 
 # Skip printing reverse shell examples
 uv run revshell.py 4444 --quiet
-uv run revshell.py 4444 -q
 ```
 
 ## Options

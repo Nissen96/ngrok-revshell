@@ -17,8 +17,11 @@ Automate reverse shell setup using tunnel services (ngrok or bore).
 git clone https://github.com/Nissen96/tunnelvision.git
 cd tunnelvision
 
-# Install dependencies with uv
+# Install dependencies with uv (recommended)
 uv sync
+
+# Or optionally with pip (a venv is recommended)
+pip install .
 ```
 
 ## Setup

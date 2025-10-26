@@ -6,13 +6,14 @@ import os
 import signal
 import subprocess
 import sys
+from time import sleep
 
 from dotenv import load_dotenv
 from pwnlib.tubes.listen import listen
-from time import sleep
 
 try:
     import ngrok
+
     NGROK_INSTALLED = True
 except ImportError:
     NGROK_INSTALLED = False
@@ -23,9 +24,6 @@ SUPPORTED_SHELLS = [
     "/bin/sh",
     "bash",
     "/bin/bash",
-    "cmd",
-    "powershell",
-    "pwsh",
     "ash",
     "bsh",
     "csh",
@@ -86,7 +84,9 @@ def check_ngrok_auth() -> bool:
     return True
 
 
-def setup_bore_tunnel(port: int, server: str = "bore.pub") -> tuple[subprocess.Popen, str, int, str]:
+def setup_bore_tunnel(
+    port: int, server: str = "bore.pub"
+) -> tuple[subprocess.Popen, str, int, str]:
     """Set up bore tunnel and return connection details"""
     colored_print("[+] Setting up bore tunnel...", Colors.BLUE)
 
@@ -97,10 +97,12 @@ def setup_bore_tunnel(port: int, server: str = "bore.pub") -> tuple[subprocess.P
             stdout=subprocess.PIPE,
             text=True,
         )
-        
+
         # Read the output to get the port
         try:
-            public_port = int(process.stdout.readline().split("remote_port\x1b[0m\x1b[2m=\x1b[0m")[-1])
+            public_port = int(
+                process.stdout.readline().split("remote_port\x1b[0m\x1b[2m=\x1b[0m")[-1]
+            )
         except Exception as e:
             colored_print(f"[!] Could not parse bore port from output: {e}", Colors.RED)
             exit()
@@ -109,7 +111,8 @@ def setup_bore_tunnel(port: int, server: str = "bore.pub") -> tuple[subprocess.P
         colored_print("[!] bore command not found. Please install bore:", Colors.RED)
         colored_print("  - Install with: cargo install bore-cli", Colors.WHITE)
         colored_print(
-            "  - Or download from: https://github.com/ekzhang/bore/releases", Colors.WHITE
+            "  - Or download from: https://github.com/ekzhang/bore/releases",
+            Colors.WHITE,
         )
         exit()
     except Exception as e:
@@ -118,16 +121,10 @@ def setup_bore_tunnel(port: int, server: str = "bore.pub") -> tuple[subprocess.P
 
     # Resolve the server IP
     try:
-        ip = (
-            subprocess.check_output(("getent", "ahostsv4", server))
-            .split()[0]
-            .decode()
-        )
+        ip = subprocess.check_output(("getent", "ahostsv4", server)).split()[0].decode()
     except subprocess.CalledProcessError:
         # Fallback if getent fails (e.g., on some systems)
-        colored_print(
-            f"[!] Could not resolve IP for {server}", Colors.YELLOW
-        )
+        colored_print(f"[!] Could not resolve IP for {server}", Colors.YELLOW)
         ip = server
 
     return process, ip, public_port, server
@@ -384,8 +381,11 @@ def main():
     elif shell in SUPPORTED_SHELLS:
         is_linux = True
     else:
-        colored_print(f"[!] Shell \"{shell}\" is unknown but will be shown in the examples.", Colors.YELLOW)
-        colored_print(f"[!] Shell will not be attempted upgraded.", Colors.YELLOW)
+        colored_print(
+            f'[!] Shell "{shell}" is unknown but will be shown in the examples.',
+            Colors.YELLOW,
+        )
+        colored_print("[!] Shell will not be attempted upgraded.", Colors.YELLOW)
         print()
 
     # Set up tunnel based on selected type and register cleanup functions

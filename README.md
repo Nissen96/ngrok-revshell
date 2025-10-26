@@ -75,6 +75,8 @@ If you want to use ngrok instead of bore:
 
 ## Usage
 
+*Note: Replace `uv run` with `python` if you installed with `pip`*.
+
 ```bash
 # Basic usage (defaults to bore tunnel and bash shell)
 uv run revshell.py 4444

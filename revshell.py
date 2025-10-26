@@ -351,6 +351,13 @@ Examples:
         help="Remote server for bore tunnel (default: %(default)s). Only used with bore tunnel.",
     )
 
+    parser.add_argument(
+        "--quiet",
+        "-q",
+        action="store_true",
+        help="Don't print reverse shell examples",
+    )
+
     # Validate port range
     args = parser.parse_args()
     if not (1 <= args.port <= 65535):
@@ -398,7 +405,9 @@ def main():
 
     colored_print(f"[+] Listening at {ip}:{public_port} ({hostname})...", Colors.GREEN)
     print()
-    print_revshell_examples(ip, public_port, shell, is_linux, is_windows)
+    
+    if not args.quiet:
+        print_revshell_examples(ip, public_port, shell, is_linux, is_windows)
 
     colored_print("[+] Waiting for connection...", Colors.BLUE)
     colored_print("    Press Ctrl+C to exit", Colors.CYAN)

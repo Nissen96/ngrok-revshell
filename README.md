@@ -95,6 +95,10 @@ uv run revshell.py 4444 --tunnel bore --to localhost:7835
 
 # Short options
 uv run revshell.py 4444 -t ngrok -s powershell
+
+# Skip printing reverse shell examples
+uv run revshell.py 4444 --quiet
+uv run revshell.py 4444 -q
 ```
 
 ## Options
@@ -103,6 +107,7 @@ uv run revshell.py 4444 -t ngrok -s powershell
 - **--tunnel, -t**: Tunnel type - 'ngrok' or 'bore' (default: bore)
 - **--shell, -s**: Shell type for reverse shell examples (default: bash)
 - **--to**: Remote server for bore tunnel (default: bore.pub). Only used with bore tunnel.
+- **--quiet, -q**: Don't print reverse shell examples
 
 ### Supported Shells
 
